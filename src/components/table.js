@@ -8,7 +8,7 @@ import equal from 'fast-deep-equal';
 import React, {useState, useMemo, useCallback} from 'react';
 import {Link} from 'react-router-dom';
 import ReactTooltip from 'react-tooltip';
-import {createBreakpoint} from 'react-use';
+import {createBreakpoint, useLocalStorage, useEffectOnce} from 'react-use';
 
 const useBreakpoint = createBreakpoint({XL: 1280, L: 768, S: 350});
 
@@ -59,7 +59,7 @@ function Table({
   onHighlightState,
   onHighlightDistrict,
 }) {
-  const [sortData, setSortData] = useState({
+  const [sortData, setSortData] = useLocalStorage('sortData', {
     sortColumn: 'confirmed',
     isAscending: true,
   });
@@ -93,8 +93,8 @@ function Table({
   const doSort = useCallback(() => {
     const newSortedStates = [...sortedStates].sort((x, y) => {
       return sortData.isAscending
-        ? parseInt(x[sortData.sortColumn]) - parseInt(y[sortData.sortColumn])
-        : parseInt(y[sortData.sortColumn]) - parseInt(x[sortData.sortColumn]);
+        ? parseInt(y[sortData.sortColumn]) - parseInt(x[sortData.sortColumn])
+        : parseInt(x[sortData.sortColumn]) - parseInt(y[sortData.sortColumn]);
     });
     setSortedStates(newSortedStates);
   }, [sortData.isAscending, sortData.sortColumn, sortedStates]);
@@ -102,18 +102,19 @@ function Table({
   const handleSort = useCallback(
     (statistic) => {
       const currentsortColumn = statistic;
-      const isAscending =
-        sortData.sortColumn === currentsortColumn
-          ? !sortData.isAscending
-          : sortData.sortColumn === 'state';
+      const isAscending = !sortData.isAscending;
       setSortData({
         sortColumn: currentsortColumn,
         isAscending: isAscending,
       });
       doSort();
     },
-    [doSort, sortData.isAscending, sortData.sortColumn]
+    [doSort, setSortData, sortData.isAscending]
   );
+
+  useEffectOnce(() => {
+    doSort();
+  });
 
   if (states.length > 0) {
     return (
@@ -163,7 +164,7 @@ function Table({
           {states && (
             <tbody>
               {sortedStates.map((state, index) => {
-                if (state.confirmed > 0) {
+                if (state.confirmed > 0 && state.statecode !== 'TT') {
                   return (
                     <Row
                       key={state.statecode}
@@ -185,13 +186,15 @@ function Table({
             </tbody>
           )}
 
-          <tbody>
-            <Row
-              key={0}
-              state={states[0]}
-              onHighlightState={onHighlightState}
-            />
-          </tbody>
+          {states && (
+            <tbody>
+              <Row
+                key={0}
+                state={states[0]}
+                onHighlightState={onHighlightState}
+              />
+            </tbody>
+          )}
         </table>
         {states && FineprintBottom}
       </React.Fragment>

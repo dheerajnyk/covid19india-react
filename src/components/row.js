@@ -13,7 +13,7 @@ import React, {useState, useCallback, useMemo} from 'react';
 import * as Icon from 'react-feather';
 import {useHistory} from 'react-router-dom';
 import ReactTooltip from 'react-tooltip';
-import {createBreakpoint} from 'react-use';
+import {createBreakpoint, useLocalStorage, useEffectOnce} from 'react-use';
 
 const useBreakpoint = createBreakpoint({XL: 1280, L: 768, S: 350});
 
@@ -171,9 +171,9 @@ function Row({
 }) {
   const [sortedDistricts, setSortedDistricts] = useState(districts);
   const [showDistricts, setShowDistricts] = useState(false);
-  const [sortData, setSortData] = useState({
+  const [sortData, setSortData] = useLocalStorage('districtSortData', {
     sortColumn: 'confirmed',
-    isAscending: false,
+    isAscending: true,
   });
 
   const history = useHistory();
@@ -242,8 +242,12 @@ function Row({
       });
       doSort();
     },
-    [doSort, sortData.isAscending, sortData.sortColumn]
+    [doSort, setSortData, sortData.isAscending, sortData.sortColumn]
   );
+
+  useEffectOnce(() => {
+    if (state.statecode !== 'TT') doSort();
+  });
 
   return (
     <React.Fragment>
